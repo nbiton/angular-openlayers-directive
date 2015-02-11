@@ -1549,6 +1549,10 @@ angular.module('openlayers-directive').factory('olMapDefaults', ["$q", "olHelper
                     newDefaults.view.extent = userDefaults.view.extent || newDefaults.view.extent;
                 }
 
+                if (isDefined(userDefaults.styles)) {
+                    newDefaults.styles = angular.extend(newDefaults.styles, userDefaults.styles);
+                }
+
             }
 
             defaults[scopeId] = newDefaults;
