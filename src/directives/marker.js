@@ -42,7 +42,7 @@ angular.module('openlayers-directive')
                     markerLayer.set('markers', true);
                     map.addLayer(markerLayer);
                     var data = getMarkerDefaults();
-                var hasTranscluded = element.find('ng-transclude').children().length > 0;
+                    var hasTranscluded = element.find('ng-transclude').children().length > 0;
 
                     var mapDefaults = olMapDefaults.getDefaults(olScope);
                     var viewProjection = mapDefaults.view.projection;
@@ -50,122 +50,122 @@ angular.module('openlayers-directive')
                     var pos;
                     var marker;
 
-                scope.$on('$destroy', function() {
-                    map.removeLayer(markerLayer);
-                });
+                    scope.$on('$destroy', function() {
+                        map.removeLayer(markerLayer);
+                    });
 
-                if (!isDefined(scope.properties)) {
-                    data.lat = scope.lat ? scope.lat : data.lat;
-                    data.lon = scope.lon ? scope.lon : data.lon;
-                    data.message = attrs.message;
-                    data.style = mapDefaults.styles.marker;
-
-                    marker = createFeature(data, viewProjection);
-                    if (!isDefined(marker)) {
-                        $log.error('[AngularJS - Openlayers] Received invalid data on ' +
-                                   'the marker.');
-                    }
-                    markerLayer.getSource().addFeature(marker);
-
-                    if (data.message || hasTranscluded) {
-                        scope.message = attrs.message;
-                        pos = ol.proj.transform([data.lon, data.lat], data.projection, viewProjection);
-                        label = createOverlay(element, pos);
-                        map.addOverlay(label);
-                    }
-                    return;
-                }
-
-                scope.$watch('properties', function(properties) {
-                    function showLabelOnEvent(evt) {
-                        if (properties.label.show) {
-                            return;
-                        }
-                        var found = false;
-                        var pixel = map.getEventPixel(evt);
-                        var feature = map.forEachFeatureAtPixel(pixel, function(feature) {
-                            return feature;
-                        });
-
-                        if (feature === marker) {
-                            found = true;
-                            if (!isDefined(label)) {
-                                if (data.projection === 'pixel') {
-                                    pos = data.coord;
-                                } else {
-                                    pos = ol.proj.transform([data.lon, data.lat],
-                                        data.projection, viewProjection);
-                                }
-                                label = createOverlay(element, pos);
-                                map.addOverlay(label);
-                            }
-                            map.getTarget().style.cursor = 'pointer';
-                        }
-
-                        if (!found && label) {
-                            map.removeOverlay(label);
-                            label = undefined;
-                            map.getTarget().style.cursor = '';
-                        }
-                    }
-
-                    if (!isDefined(marker)) {
-                        data.projection = properties.projection ? properties.projection : data.projection;
-                        data.coord = properties.coord ? properties.coord : data.coord;
-                        data.lat = properties.lat ? properties.lat : data.lat;
-                        data.lon = properties.lon ? properties.lon : data.lon;
-
-                        if (isDefined(properties.style)) {
-                            data.style = properties.style;
-                        } else {
-                            data.style = mapDefaults.styles.marker;
-                        }
+                    if (!isDefined(scope.properties)) {
+                        data.lat = scope.lat ? scope.lat : data.lat;
+                        data.lon = scope.lon ? scope.lon : data.lon;
+                        data.message = attrs.message;
+                        data.style = mapDefaults.styles.marker;
 
                         marker = createFeature(data, viewProjection);
                         if (!isDefined(marker)) {
                             $log.error('[AngularJS - Openlayers] Received invalid data on ' +
-                                       'the marker.');
+                            'the marker.');
                         }
                         markerLayer.getSource().addFeature(marker);
-                    }
 
-                    if (isDefined(label)) {
-                        map.removeOverlay(label);
-                    }
-
-                    if (!isDefined(properties.label)) {
-                        return;
-                    }
-
-                    scope.message = properties.label.message;
-                    if (!hasTranscluded && (!isDefined(scope.message) || scope.message.length === 0)) {
-                        return;
-                    }
-
-                    if (properties.label && properties.label.show === true) {
-                        if (data.projection === 'pixel') {
-                            pos = data.coord;
-                        } else {
+                        if (data.message || hasTranscluded) {
+                            scope.message = attrs.message;
                             pos = ol.proj.transform([data.lon, data.lat], data.projection, viewProjection);
+                            label = createOverlay(element, pos);
+                            map.addOverlay(label);
                         }
-                        label = createOverlay(element, pos);
-                        map.addOverlay(label);
+                        return;
                     }
 
-                    if (label && properties.label && properties.label.show === false) {
-                        map.removeOverlay(label);
-                        label = undefined;
-                    }
+                    scope.$watch('properties', function(properties) {
+                        function showLabelOnEvent(evt) {
+                            if (properties.label.show) {
+                                return;
+                            }
+                            var found = false;
+                            var pixel = map.getEventPixel(evt);
+                            var feature = map.forEachFeatureAtPixel(pixel, function(feature) {
+                                return feature;
+                            });
 
-                    if (properties.label && properties.label.show === false && properties.label.showOnMouseOver) {
-                        map.getViewport().addEventListener('mousemove', showLabelOnEvent);
-                    }
+                            if (feature === marker) {
+                                found = true;
+                                if (!isDefined(label)) {
+                                    if (data.projection === 'pixel') {
+                                        pos = data.coord;
+                                    } else {
+                                        pos = ol.proj.transform([data.lon, data.lat],
+                                            data.projection, viewProjection);
+                                    }
+                                    label = createOverlay(element, pos);
+                                    map.addOverlay(label);
+                                }
+                                map.getTarget().style.cursor = 'pointer';
+                            }
 
-                    if (properties.label && properties.label.show === false && properties.label.showOnMouseClick) {
-                        map.getViewport().addEventListener('click', showLabelOnEvent);
-                    }
-                }, true);
-            });
-        }
-    };
-});
+                            if (!found && label) {
+                                map.removeOverlay(label);
+                                label = undefined;
+                                map.getTarget().style.cursor = '';
+                            }
+                        }
+
+                        if (!isDefined(marker)) {
+                            data.projection = properties.projection ? properties.projection : data.projection;
+                            data.coord = properties.coord ? properties.coord : data.coord;
+                            data.lat = properties.lat ? properties.lat : data.lat;
+                            data.lon = properties.lon ? properties.lon : data.lon;
+
+                            if (isDefined(properties.style)) {
+                                data.style = properties.style;
+                            } else {
+                                data.style = mapDefaults.styles.marker;
+                            }
+
+                            marker = createFeature(data, viewProjection);
+                            if (!isDefined(marker)) {
+                                $log.error('[AngularJS - Openlayers] Received invalid data on ' +
+                                'the marker.');
+                            }
+                            markerLayer.getSource().addFeature(marker);
+                        }
+
+                        if (isDefined(label)) {
+                            map.removeOverlay(label);
+                        }
+
+                        if (!isDefined(properties.label)) {
+                            return;
+                        }
+
+                        scope.message = properties.label.message;
+                        if (!hasTranscluded && (!isDefined(scope.message) || scope.message.length === 0)) {
+                            return;
+                        }
+
+                        if (properties.label && properties.label.show === true) {
+                            if (data.projection === 'pixel') {
+                                pos = data.coord;
+                            } else {
+                                pos = ol.proj.transform([data.lon, data.lat], data.projection, viewProjection);
+                            }
+                            label = createOverlay(element, pos);
+                            map.addOverlay(label);
+                        }
+
+                        if (label && properties.label && properties.label.show === false) {
+                            map.removeOverlay(label);
+                            label = undefined;
+                        }
+
+                        if (properties.label && properties.label.show === false && properties.label.showOnMouseOver) {
+                            map.getViewport().addEventListener('mousemove', showLabelOnEvent);
+                        }
+
+                        if (properties.label && properties.label.show === false && properties.label.showOnMouseClick) {
+                            map.getViewport().addEventListener('click', showLabelOnEvent);
+                        }
+                    }, true);
+                });
+            }
+        };
+    });
