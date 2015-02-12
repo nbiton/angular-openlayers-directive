@@ -568,7 +568,8 @@ angular.module('openlayers-directive')
                 lon: 0,
                 coord: [],
                 show: true,
-                showOnMouseOver: false
+                showOnMouseOver: false,
+                showOnMouseClick: false
             };
         };
 
@@ -580,9 +581,14 @@ angular.module('openlayers-directive')
                 label: '=label',
                 properties: '=olMarkerProperties'
             },
+            transclude: true,
             require: '^openlayers',
             replace: true,
-            template: '<div class="popup-label marker" ng-bind-html="message"></div>',
+            template:
+            '<div class="popup-label marker">' +
+            '<div ng-bind-html="message"></div>' +
+            '<ng-transclude></ng-transclude>' +
+            '</div>',
 
             link: function(scope, element, attrs, controller) {
                 var isDefined = olHelpers.isDefined;
@@ -596,6 +602,7 @@ angular.module('openlayers-directive')
                     markerLayer.set('markers', true);
                     map.addLayer(markerLayer);
                     var data = getMarkerDefaults();
+                    var hasTranscluded = element.find('ng-transclude').children().length > 0;
 
                     var mapDefaults = olMapDefaults.getDefaults(olScope);
                     var viewProjection = mapDefaults.view.projection;
@@ -620,7 +627,7 @@ angular.module('openlayers-directive')
                         }
                         markerLayer.getSource().addFeature(marker);
 
-                        if (data.message) {
+                        if (data.message || hasTranscluded) {
                             scope.message = attrs.message;
                             pos = ol.proj.transform([data.lon, data.lat], data.projection, viewProjection);
                             label = createOverlay(element, pos);
@@ -630,6 +637,38 @@ angular.module('openlayers-directive')
                     }
 
                     scope.$watch('properties', function(properties) {
+                        function showLabelOnEvent(evt) {
+                            if (properties.label.show) {
+                                return;
+                            }
+                            var found = false;
+                            var pixel = map.getEventPixel(evt);
+                            var feature = map.forEachFeatureAtPixel(pixel, function(feature) {
+                                return feature;
+                            });
+
+                            if (feature === marker) {
+                                found = true;
+                                if (!isDefined(label)) {
+                                    if (data.projection === 'pixel') {
+                                        pos = data.coord;
+                                    } else {
+                                        pos = ol.proj.transform([data.lon, data.lat],
+                                            data.projection, viewProjection);
+                                    }
+                                    label = createOverlay(element, pos);
+                                    map.addOverlay(label);
+                                }
+                                map.getTarget().style.cursor = 'pointer';
+                            }
+
+                            if (!found && label) {
+                                map.removeOverlay(label);
+                                label = undefined;
+                                map.getTarget().style.cursor = '';
+                            }
+                        }
+
                         if (!isDefined(marker)) {
                             data.projection = properties.projection ? properties.projection : data.projection;
                             data.coord = properties.coord ? properties.coord : data.coord;
@@ -659,7 +698,7 @@ angular.module('openlayers-directive')
                         }
 
                         scope.message = properties.label.message;
-                        if (!isDefined(scope.message) || scope.message.length === 0) {
+                        if (!hasTranscluded && (!isDefined(scope.message) || scope.message.length === 0)) {
                             return;
                         }
 
@@ -679,37 +718,11 @@ angular.module('openlayers-directive')
                         }
 
                         if (properties.label && properties.label.show === false && properties.label.showOnMouseOver) {
-                            map.getViewport().addEventListener('mousemove', function(evt) {
-                                if (properties.label.show) {
-                                    return;
-                                }
-                                var found = false;
-                                var pixel = map.getEventPixel(evt);
-                                var feature = map.forEachFeatureAtPixel(pixel, function(feature) {
-                                    return feature;
-                                });
+                            map.getViewport().addEventListener('mousemove', showLabelOnEvent);
+                        }
 
-                                if (feature === marker) {
-                                    found = true;
-                                    if (!isDefined(label)) {
-                                        if (data.projection === 'pixel') {
-                                            pos = data.coord;
-                                        } else {
-                                            pos = ol.proj.transform([data.lon, data.lat],
-                                                data.projection, viewProjection);
-                                        }
-                                        label = createOverlay(element, pos);
-                                        map.addOverlay(label);
-                                    }
-                                    map.getTarget().style.cursor = 'pointer';
-                                }
-
-                                if (!found && label) {
-                                    map.removeOverlay(label);
-                                    label = undefined;
-                                    map.getTarget().style.cursor = '';
-                                }
-                            });
+                        if (properties.label && properties.label.show === false && properties.label.showOnMouseClick) {
+                            map.getViewport().addEventListener('click', showLabelOnEvent);
                         }
                     }, true);
                 });
