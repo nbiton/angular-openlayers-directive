@@ -638,7 +638,6 @@ angular.module('openlayers-directive')
 
                     scope.$watch('properties', function(properties) {
                         function showLabelOnEvent(evt) {
-                            evt.preventDefault();
                             if (properties.label.show) {
                                 return;
                             }
@@ -648,7 +647,9 @@ angular.module('openlayers-directive')
                                 return feature;
                             });
 
+                            var actionTaken = false;
                             if (feature === marker) {
+                                actionTaken = true;
                                 found = true;
                                 if (!isDefined(label)) {
                                     if (data.projection === 'pixel') {
@@ -664,9 +665,14 @@ angular.module('openlayers-directive')
                             }
 
                             if (!found && label) {
+                                actionTaken = true;
                                 map.removeOverlay(label);
                                 label = undefined;
                                 map.getTarget().style.cursor = '';
+                            }
+
+                            if (actionTaken) {
+                                evt.preventDefault();
                             }
                         }
 
