@@ -1021,7 +1021,7 @@ angular.module('openlayers-directive').factory('olHelpers', ["$q", "$log", "$htt
                 var url = 'http://api.tiles.mapbox.com/v4/' + source.mapId + '/{z}/{x}/{y}.png?access_token=' +
                     source.accessToken;
 
-                var pixelRatio = window.goog.dom.getPixelRatio();
+                var pixelRatio = window.devicePixelRatio;
 
                 if (pixelRatio > 1) {
                     url = url.replace('.png', '@2x.png');
