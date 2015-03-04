@@ -85,10 +85,10 @@ angular.module('openlayers-directive', ['ngSanitize'])
             // Resolve the map object to the promises
             scope.setMap(map);
             olData.setMap(map, attrs.id);
-            
+
             // Set width and height if they are defined dynamically
-            scope.$watch("height", function (newVal, oldVal) {
-            	if (isDefined(newVal)) {
+            scope.$watch('height', function(newVal) {
+                if (isDefined(newVal)) {
                     if (isNaN(newVal)) {
                         element.css('height', newVal);
                     } else {
@@ -97,9 +97,9 @@ angular.module('openlayers-directive', ['ngSanitize'])
                     map.updateSize();
                 }
             });
-            
-            scope.$watch("width", function (newVal, oldVal) {
-            	if (isDefined(newVal)) {
+
+            scope.$watch('width', function(newVal) {
+                if (isDefined(newVal)) {
                     if (isNaN(newVal)) {
                         element.css('width', newVal);
                     } else {
