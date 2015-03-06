@@ -78,6 +78,10 @@ angular.module('openlayers-directive').directive('olLayer', function($log, $q, o
                             olLayer.setOpacity(properties.opacity);
                         }
 
+                        if (angular.isArray(properties.extent)) {
+                            olLayer.setExtent(properties.extent);
+                        }
+
                         if (properties.style) {
                             if (!angular.isFunction(properties.style)) {
                                 style = createStyle(properties.style);
