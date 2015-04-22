@@ -1,5 +1,6 @@
 angular-openlayers-directive
 ============================
+[![Build Status](https://travis-ci.org/tombatossals/angular-openlayers-directive.png)](https://travis-ci.org/tombatossals/angular-openlayers-directive)
 
 Work in progress.
 
@@ -39,6 +40,7 @@ Let's start with some basic examples. Look at the source code of the example to 
 - [Dynamic marker properties example](http://tombatossals.github.io/angular-openlayers-directive/examples/063-markers-properties-example.html)
 - [Marker with HTML render inside label example](http://tombatossals.github.io/angular-openlayers-directive/examples/064-markers-render-html-inside-labels-example.html)
 - [Marker in static image layer example](http://tombatossals.github.io/angular-openlayers-directive/examples/065-markers-static-image-layer-example.html)
+- [Marker custom icon example](http://tombatossals.github.io/angular-openlayers-directive/examples/067-marker-custom-icon-example.html)
 - [View rotation example](http://tombatossals.github.io/angular-openlayers-directive/examples/070-view-rotation-example.html)
 - [Events propagation example](http://tombatossals.github.io/angular-openlayers-directive/examples/080-events-propagation-example.html)
 - [Events with vectors example](http://tombatossals.github.io/angular-openlayers-directive/examples/081-events-vector-example.html)
@@ -67,25 +69,7 @@ After that, you must include the openlayers-directive dependency on your angular
 var app = angular.module("demoapp", ["openlayers-directive"]);
 ```
 
-The default behaviour will show an OpenstreetMap layer and the zoom and attributions controls, but you can customize those default vaules to fit your needs. For example, this HTML will show a map with a Mapquest layer, centered on
-
-```javascript
-angular.extend($scope, {
-    defaults: {
-        layers: {
-            main: {
-                source: {
-                    type; "OSM",
-                    url: "http://{s}.tile.opencyclemap.org/cycle/{z}/{x}/{y}.png",
-                }
-            }
-        },
-        maxZoom: 14
-    }
-});
-```
-
-Furthermore, you can set a bi-directional update of values between the map and the variables of your controler. This way you can interact easily with the map. Example:
+The default behaviour will show an OpenstreetMap layer and the zoom and attributions controls, but you can customize those default vaules to fit your needs. Furthermore, you can set a bi-directional update of values between the map and the variables of your controler. This way you can interact easily with the map. Example:
 
 ```javascript
 angular.extend($scope, {
@@ -103,3 +87,8 @@ Finally, you must include the markup directive on your HTML page, like this:
 ```html
 <openlayers ol-center="center" height="480px" width="640px"></openlayers>
 ```
+
+Contributing
+--------------------------
+
+Contributions are more than welcome. Please refer to the [contributions guidelines](CONTRIBUTING.md) for more details on code style, development life-cycle etc.

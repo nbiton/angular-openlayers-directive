@@ -70,33 +70,84 @@ angular.module('openlayers-directive').factory('olHelpers', function($q, $log, $
 
     var mapQuestLayers = ['osm', 'sat', 'hyb'];
 
-    var createStyle = function(style) {
-        var fill;
-        var stroke;
-        var icon;
+    var styleMap = {
+        'style': ol.style.Style,
+        'fill': ol.style.Fill,
+        'stroke': ol.style.Stroke,
+        'circle': ol.style.Circle,
+        'icon': ol.style.Icon,
+        'image': ol.style.Image,
+        'regularshape': ol.style.RegularShape,
+        'text': ol.style.Text
+    };
 
-        if (style.fill) {
-            fill = new ol.style.Fill({
-                color: style.fill.color
+    var optionalFactory = function(style, Constructor) {
+        if (Constructor && style instanceof Constructor) {
+            return style;
+        } else if (Constructor) {
+            return new Constructor(style);
+        } else {
+            return style;
+        }
+    };
+
+    //Parse the style tree calling the appropriate constructors.
+    //The keys in styleMap can be used and the OpenLayers constructors can be
+    //used directly.
+    var createStyle = function recursiveStyle(data, styleName) {
+        var style;
+        if (!styleName) {
+            styleName = 'style';
+            style = data;
+        } else {
+            style = data[styleName];
+        }
+        //Instead of defining one style for the layer, we've been given a style function
+        //to apply to each feature.
+        if (styleName === 'style' && data instanceof Function) {
+            return data;
+        }
+
+        if (!(style instanceof Object)) {
+            return style;
+        }
+
+        var styleObject;
+        if (Object.prototype.toString.call(style) === '[object Object]') {
+            styleObject = {};
+            var styleConstructor = styleMap[styleName];
+            if (styleConstructor && style instanceof styleConstructor) {
+                return style;
+            }
+            Object.getOwnPropertyNames(style).forEach(function(val, idx, array) {
+                //Consider the case
+                //image: {
+                //  circle: {
+                //     fill: {
+                //       color: 'red'
+                //     }
+                //   }
+                //
+                //An ol.style.Circle is an instance of ol.style.Image, so we do not want to construct
+                //an Image and then construct a Circle.  We assume that if we have an instanceof
+                //relationship, that the JSON parent has exactly one child.
+                //We check to see if an inheritance relationship exists.
+                //If it does, then for the parent we create an instance of the child.
+                var valConstructor = styleMap[val];
+                if (styleConstructor && valConstructor &&
+                   valConstructor.prototype instanceof styleMap[styleName]) {
+                    console.assert(array.length === 1, 'Extra parameters for ' + styleName);
+                    styleObject = recursiveStyle(style, val);
+                    return optionalFactory(styleObject, valConstructor);
+                } else {
+                    styleObject[val] = recursiveStyle(style, val);
+                    styleObject[val] = optionalFactory(styleObject[val], styleMap[val]);
+                }
             });
+        } else {
+            styleObject = style;
         }
-
-        if (style.stroke) {
-            stroke = new ol.style.Stroke({
-                color: style.stroke.color,
-                width: style.stroke.width
-            });
-        }
-
-        if (style.icon) {
-            icon = new ol.style.Icon(style.icon);
-        }
-
-        return new ol.style.Style({
-            fill: fill,
-            stroke: stroke,
-            image: icon
-        });
+        return optionalFactory(styleObject, styleMap[styleName]);
     };
 
     var detectLayerType = function(layer) {
@@ -186,14 +237,25 @@ angular.module('openlayers-directive').factory('olHelpers', function($q, $log, $
                 break;
 
             case 'TileWMS':
-                if (!source.url || !source.params) {
-                    $log.error('[AngularJS - Openlayers] - TileWMS Layer needs valid url and params properties');
+                if ((!source.url && !source.urls) || !source.params) {
+                    $log.error('[AngularJS - Openlayers] - TileWMS Layer needs ' +
+                               'valid url (or urls) and params properties');
                 }
-                oSource = new ol.source.TileWMS({
-                  url: source.url,
+
+                var wmsConfiguration = {
                   crossOrigin: source.crossOrigin ? source.crossOrigin : 'anonymous',
                   params: source.params
-                });
+                };
+
+                if (wmsConfiguration.url) {
+                    wmsConfiguration.url = source.url;
+                }
+
+                if (source.urls) {
+                    wmsConfiguration.urls = source.urls;
+                }
+
+                oSource = new ol.source.TileWMS(wmsConfiguration);
                 break;
             case 'OSM':
                 if (source.attribution) {
@@ -379,7 +441,8 @@ angular.module('openlayers-directive').factory('olHelpers', function($q, $log, $
                     url: source.url,
                     imageSize: source.imageSize,
                     projection: projection,
-                    imageExtent: projection.getExtent()
+                    imageExtent: projection.getExtent(),
+                    imageLoadFunction: source.imageLoadFunction
                 });
                 break;
         }
@@ -403,6 +466,7 @@ angular.module('openlayers-directive').factory('olHelpers', function($q, $log, $
                 projection: projection,
                 maxZoom: view.maxZoom,
                 minZoom: view.minZoom,
+                extent: view.extent
             });
         },
 
@@ -530,9 +594,7 @@ angular.module('openlayers-directive').factory('olHelpers', function($q, $log, $
         },
 
         setVectorLayerEvents: function(events, map, scope, layerName) {
-            console.log(events, map, scope, layerName);
             if (isDefined(events) && angular.isArray(events.layers)) {
-                console.log('hola');
                 angular.forEach(events.layers, function(eventType) {
                     angular.element(map.getViewport()).on(eventType, function(evt) {
                         var pixel = map.getEventPixel(evt);
@@ -650,12 +712,50 @@ angular.module('openlayers-directive').factory('olHelpers', function($q, $log, $
 
             if (isDefined(markersIndex)) {
                 var markers = layers.item(markersIndex);
+                layer.index = markersIndex;
                 layers.setAt(markersIndex, layer);
+                markers.index = layers.getLength();
                 layers.push(markers);
             } else {
+                layer.index = layers.getLength();
                 layers.push(layer);
             }
 
+        },
+
+        removeLayer: function(layers, index) {
+            layers.removeAt(index);
+            for (var i = index; i < layers.getLength(); i++) {
+                var l = layers.item(i);
+                if (l === null) {
+                    layers.insertAt(i, null);
+                    break;
+                } else {
+                    l.index = i;
+                }
+            }
+        },
+
+        insertLayer: function(layers, index, layer) {
+            if (layers.getLength() < index) {
+                while (layers.getLength() < index) {
+                    layers.push(null);
+                }
+                layer.index = index;
+                layers.push(layer);
+            } else {
+                layer.index = index;
+                layers.insertAt(layer.index, layer);
+                for (var i = index + 1; i < layers.getLength(); i++) {
+                    var l = layers.item(i);
+                    if (l === null) {
+                        layers.removeAt(i);
+                        break;
+                    } else {
+                        l.index = i;
+                    }
+                }
+            }
         },
 
         createOverlay: function(element, pos) {
