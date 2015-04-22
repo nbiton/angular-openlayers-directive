@@ -988,36 +988,41 @@ angular.module('openlayers-directive').factory('olHelpers', ["$q", "$log", "$htt
             return style;
         }
 
-        var styleObject = {};
-        var styleConstructor = styleMap[styleName];
-        if (styleConstructor && style instanceof styleConstructor) {
-            return style;
-        }
-        Object.getOwnPropertyNames(style).forEach(function(val, idx, array) {
-            //Consider the case
-            //image: {
-            //  circle: {
-            //     fill: {
-            //       color: 'red'
-            //     }
-            //   }
-            //
-            //An ol.style.Circle is an instance of ol.style.Image, so we do not want to construct
-            //an Image and then construct a Circle.  We assume that if we have an instanceof
-            //relationship, that the JSON parent has exactly one child.
-            //We check to see if an inheritance relationship exists.
-            //If it does, then for the parent we create an instance of the child.
-            var valConstructor = styleMap[val];
-            if (styleConstructor && valConstructor &&
-               valConstructor.prototype instanceof styleMap[styleName]) {
-                console.assert(array.length === 1, 'Extra parameters for ' + styleName);
-                styleObject = recursiveStyle(style, val);
-                return optionalFactory(styleObject, valConstructor);
-            } else {
-                styleObject[val] = recursiveStyle(style, val);
-                styleObject[val] = optionalFactory(styleObject[val], styleMap[val]);
+        var styleObject;
+        if (Object.prototype.toString.call(style) === '[object Object]') {
+            styleObject = {};
+            var styleConstructor = styleMap[styleName];
+            if (styleConstructor && style instanceof styleConstructor) {
+                return style;
             }
-        });
+            Object.getOwnPropertyNames(style).forEach(function(val, idx, array) {
+                //Consider the case
+                //image: {
+                //  circle: {
+                //     fill: {
+                //       color: 'red'
+                //     }
+                //   }
+                //
+                //An ol.style.Circle is an instance of ol.style.Image, so we do not want to construct
+                //an Image and then construct a Circle.  We assume that if we have an instanceof
+                //relationship, that the JSON parent has exactly one child.
+                //We check to see if an inheritance relationship exists.
+                //If it does, then for the parent we create an instance of the child.
+                var valConstructor = styleMap[val];
+                if (styleConstructor && valConstructor &&
+                   valConstructor.prototype instanceof styleMap[styleName]) {
+                    console.assert(array.length === 1, 'Extra parameters for ' + styleName);
+                    styleObject = recursiveStyle(style, val);
+                    return optionalFactory(styleObject, valConstructor);
+                } else {
+                    styleObject[val] = recursiveStyle(style, val);
+                    styleObject[val] = optionalFactory(styleObject[val], styleMap[val]);
+                }
+            });
+        } else {
+            styleObject = style;
+        }
         return optionalFactory(styleObject, styleMap[styleName]);
     };
 
@@ -1312,7 +1317,8 @@ angular.module('openlayers-directive').factory('olHelpers', ["$q", "$log", "$htt
                     url: source.url,
                     imageSize: source.imageSize,
                     projection: projection,
-                    imageExtent: projection.getExtent()
+                    imageExtent: projection.getExtent(),
+                    imageLoadFunction: source.imageLoadFunction
                 });
                 break;
         }
@@ -1335,7 +1341,8 @@ angular.module('openlayers-directive').factory('olHelpers', ["$q", "$log", "$htt
             return new ol.View({
                 projection: projection,
                 maxZoom: view.maxZoom,
-                minZoom: view.minZoom
+                minZoom: view.minZoom,
+                extent: view.extent
             });
         },
 
@@ -1463,9 +1470,7 @@ angular.module('openlayers-directive').factory('olHelpers', ["$q", "$log", "$htt
         },
 
         setVectorLayerEvents: function(events, map, scope, layerName) {
-            console.log(events, map, scope, layerName);
             if (isDefined(events) && angular.isArray(events.layers)) {
-                console.log('hola');
                 angular.forEach(events.layers, function(eventType) {
                     angular.element(map.getViewport()).on(eventType, function(evt) {
                         var pixel = map.getEventPixel(evt);
